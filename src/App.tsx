@@ -148,6 +148,7 @@ function DetectprimaryDevice() {
 function App() {
   const overlayRef = React.useRef<HTMLDivElement | null>(null);
   const svgRef = React.useRef<SVGSVGElement | null>(null);
+  const svgPointRef = React.useRef<DOMPoint | null>(null);
   const boundingRect = React.useRef<DOMRect | null>(null);
   const positionDiff = React.useRef<{ x: number; y: number } | null>(null);
   const initialCoordinate = React.useRef<{ x: number; y: number } | null>(null);
@@ -161,19 +162,55 @@ function App() {
     onChange: (rect) => {
       setDimensions({ width: rect.width, height: rect.height });
     },
+    observe: true,
   });
 
   const bind = useGesture(
     {
-      onWheel: ({ movement: [x, y], first, last, event }) => {
+      onWheel: ({
+        movement: [x, y],
+        delta: [_, dy],
+        ctrlKey,
+        metaKey,
+        first,
+        last,
+        event,
+      }) => {
         event.stopPropagation();
         if (first) {
           boundingRect.current =
             svgRef.current?.getBoundingClientRect() ?? null;
           initialCoordinate.current = { x: minX, y: minY };
+          svgPointRef.current = svgRef.current?.createSVGPoint() ?? null;
+          svgPointRef.current!.x = event.clientX;
+          svgPointRef.current!.y = event.clientY;
         }
 
-        if (!boundingRect.current || !initialCoordinate.current) {
+        if (
+          !boundingRect.current ||
+          !initialCoordinate.current ||
+          !svgPointRef.current ||
+          !svgRef.current ||
+          isMobile ||
+          (!isTrackpad && !(ctrlKey && metaKey))
+        ) {
+          return;
+        }
+
+        if (ctrlKey || metaKey) {
+          const normalised = -(dy % 3 ? dy * 10 : dy / 3);
+          const scaleDelta = normalised > 0 ? 1 / 1.3 : 1.3;
+          const startPoint = svgPointRef.current.matrixTransform(
+            svgRef.current.getScreenCTM()?.inverse()
+          );
+          setPosition({
+            x: minX - (startPoint.x - minX) * (scaleDelta - 1),
+            y: minY - (startPoint.y - minY) * (scaleDelta - 1),
+          });
+          setDimensions({
+            width: width * scaleDelta,
+            height: height * scaleDelta,
+          });
           return;
         }
 
@@ -238,7 +275,7 @@ function App() {
       drag: { enabled: detected && (!isTrackpad || isMobile) },
       wheel: {
         axis: "lock",
-        enabled: detected && isTrackpad && !isMobile,
+        enabled: detected && !isMobile,
       },
     }
   );
