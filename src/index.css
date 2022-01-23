@@ -18,6 +18,10 @@ code {
     monospace;
 }
 
+.fixed {
+  position: fixed;
+}
+
 .canvas-overlay {
   position: fixed;
   inset: 0;

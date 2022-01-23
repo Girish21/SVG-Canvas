@@ -10,6 +10,7 @@ type ShapeData = {
   x: number;
   y: number;
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type StateAtomType = WritableAtom<ShapeData, ShapeData, any>;
 type ShapeComponentType = {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -59,6 +60,12 @@ const writeShapes = atom(null, (get, set, value) => {
   set(shapes, [...get(shapes), value as ShapeState]);
 });
 
+const selectedShape = atom<StateAtomType | null>(null);
+const readSelectedShape = atom((get) => get(selectedShape));
+const writeSelectedShape = atom(null, (_, set, value) =>
+  set(selectedShape, value as StateAtomType)
+);
+
 function Shapes({ svgRef }: { svgRef: React.RefObject<SVGSVGElement> }) {
   const [$shapes] = useAtom(readShapes);
 
@@ -83,7 +90,7 @@ function Background() {
 
 function Toolbar() {
   const [{ height, width, x, y }] = useAtom(readViewbox);
-  const [_, setShapes] = useAtom(writeShapes);
+  const [, setShapes] = useAtom(writeShapes);
 
   const getOrigin = () => {
     const calculatedX =
@@ -129,8 +136,14 @@ function Toolbar() {
   );
 }
 
+function SelectedShape() {
+  const [shape] = useAtom(readSelectedShape);
+
+  return <div className="fixed">{`${shape}`}</div>;
+}
+
 function DetectprimaryDevice() {
-  const [_, set] = useAtom(writePrimaryDevice);
+  const [, set] = useAtom(writePrimaryDevice);
 
   React.useEffect(() => {
     const isMobile = window.matchMedia("(hover: none)").matches;
@@ -140,6 +153,7 @@ function DetectprimaryDevice() {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function detectTrackPad(e: any) {
       let isTrackpad = false;
       if (e.wheelDeltaY) {
@@ -163,7 +177,7 @@ function DetectprimaryDevice() {
       document.removeEventListener("mousewheel", detectTrackPad);
       document.removeEventListener("DOMMouseScroll", detectTrackPad);
     };
-  }, []);
+  }, [set]);
 
   return null;
 }
@@ -177,8 +191,9 @@ function App() {
 
   const [{ detected, isTrackpad, isMobile }] = useAtom(readPrimaryDevice);
   const [{ height, width, x: minX, y: minY }] = useAtom(readViewbox);
-  const [_, setDimensions] = useAtom(writeViewboxDimensions);
-  const [__, setPosition] = useAtom(writeViewboxPoisiton);
+  const [, setDimensions] = useAtom(writeViewboxDimensions);
+  const [, setPosition] = useAtom(writeViewboxPoisiton);
+  const [, setSelectedShape] = useAtom(writeSelectedShape);
 
   useRect(overlayRef, {
     onChange: (rect) => {
@@ -226,6 +241,7 @@ function App() {
           positionDiff.current = normalize(
             { x, y },
             { clientWidth: width, clientHeight: height },
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             boundingRect.current!
           );
           initialCoordinate.current = { x: minX, y: minY };
@@ -270,11 +286,13 @@ function App() {
       <div ref={overlayRef} className="canvas-overlay" />
       <DetectprimaryDevice />
       <Toolbar />
+      <SelectedShape />
       <svg
         ref={svgRef}
         viewBox={`${minX} ${minY} ${width} ${height}`}
         className="fix-gesture"
         fill="transparent"
+        onClick={() => setSelectedShape(null)}
         {...bind()}
       >
         <Background />
@@ -285,6 +303,6 @@ function App() {
 }
 
 export type { StateAtomType, ShapeComponentType };
-export { readViewbox, readViewport };
+export { readViewbox, readViewport, readSelectedShape, writeSelectedShape };
 
 export default App;
