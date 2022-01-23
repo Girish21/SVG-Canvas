@@ -82,19 +82,42 @@ function Background() {
 }
 
 function Toolbar() {
+  const [{ height, width, x, y }] = useAtom(readViewbox);
   const [_, setShapes] = useAtom(writeShapes);
 
+  const getOrigin = () => {
+    const calculatedX =
+      // when the canvas is panned,
+      // take account for the panned distance
+      (width + x) / 2 +
+      // compensate for the panned distance
+      x / 2;
+    const calculatedY = (height + y) / 2 + y / 2;
+
+    return { x: calculatedX, y: calculatedY };
+  };
+
   const addRect = () => {
+    const { x, y } = getOrigin();
+
     setShapes({
       Comp: Rect,
-      dataAtom: atom<ShapeData>({ x: 20, y: 20 }),
+      dataAtom: atom<ShapeData>({
+        x,
+        y,
+      }),
     } as ShapeState);
   };
 
   const addCircle = () => {
+    const { x, y } = getOrigin();
+
     setShapes({
       Comp: Circle,
-      dataAtom: atom<ShapeData>({ x: 20, y: 20 }),
+      dataAtom: atom<ShapeData>({
+        x,
+        y,
+      }),
     } as ShapeState);
   };
 
@@ -178,8 +201,8 @@ function App() {
         }
 
         setPosition({
-          x: initialCoordinate.current.x - x,
-          y: initialCoordinate.current.y - y,
+          x: initialCoordinate.current.x + x,
+          y: initialCoordinate.current.y + y,
         });
 
         if (last) {
@@ -237,7 +260,6 @@ function App() {
     {
       drag: { enabled: detected && (!isTrackpad || isMobile) },
       wheel: {
-        axis: "lock",
         enabled: detected && isTrackpad && !isMobile,
       },
     }
