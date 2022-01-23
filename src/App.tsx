@@ -201,6 +201,16 @@ function App() {
     },
   });
 
+  React.useEffect(() => {
+    function handler() {
+      setSelectedShape(null);
+    }
+    document.addEventListener("click", handler);
+    return () => {
+      document.removeEventListener("click", handler);
+    };
+  }, [setSelectedShape]);
+
   const bind = useGesture(
     {
       onWheel: ({ movement: [x, y], first, last, event }) => {
